@@ -157,6 +157,11 @@ def readKitti360Info(args):
         s_frame_id = 11400
         e_frame_id = 11450  # Inclusive
         val_frame_ids = [11410, 11420, 11430, 11440]
+    elif sequence_id == "0000":
+        sequence_name = "test_seq_real_sync"
+        s_frame_id = 0
+        e_frame_id = 455  # Inclusive
+        val_frame_ids = [9, 19, 29, 39, 49, 59, 69, 79, 89, 99, 109, 119, 129, 139, 149, 159, 169, 179, 189, 199, 209, 219, 229, 239, 249, 259, 269, 279, 289, 299, 309, 319, 329, 339, 349, 359, 369, 379, 389, 399, 409, 419, 429, 439, 449]
     else:
         raise ValueError(f"Invalid sequence id: {sequence_id}")
 

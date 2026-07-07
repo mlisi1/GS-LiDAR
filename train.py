@@ -644,6 +644,10 @@ if __name__ == "__main__":
     parser.add_argument("--start_checkpoint", type=str, default=None)
     parser.add_argument("--debug_cuda", action="store_true")
     parser.add_argument("--test_only", action="store_true")
+    parser.add_argument("--refine_only", action="store_true",
+                         help="Skip training() and reuse the existing chkpnt<iterations>.pth + "
+                              "ray_drop_datasets/ on disk -- for resuming straight into refine()+refine_test() "
+                              "after training finished but refine() crashed (e.g. OOM).")
     parser.add_argument("--median_depth", action="store_true")
     parser.add_argument("--show_log", action="store_true")
     args_read, _ = parser.parse_known_args()
@@ -657,7 +661,7 @@ if __name__ == "__main__":
     OmegaConf.update(args, "test_only", args_read.test_only)
     OmegaConf.update(args, "median_depth", args_read.median_depth)
 
-    if os.path.exists(args.model_path) and not args.test_only and args.start_checkpoint is None:
+    if os.path.exists(args.model_path) and not args.test_only and not args_read.refine_only and args.start_checkpoint is None:
         shutil.rmtree(args.model_path)
     os.makedirs(args.model_path, exist_ok=True)
 
@@ -697,7 +701,7 @@ if __name__ == "__main__":
             f.writelines(eachArg + ' : ' + str(value) + '\n')
         f.writelines('------------------- end -------------------')
 
-    if os.path.exists(os.path.join(args.model_path, 'ray_drop_datasets')) and not args.test_only:
+    if os.path.exists(os.path.join(args.model_path, 'ray_drop_datasets')) and not args.test_only and not args_read.refine_only:
         shutil.rmtree(os.path.join(args.model_path, 'ray_drop_datasets'))
     os.makedirs(os.path.join(args.model_path, 'ray_drop_datasets'), exist_ok=True)
     os.makedirs(os.path.join(args.model_path, 'ray_drop_datasets', 'gt'), exist_ok=True)
@@ -711,13 +715,22 @@ if __name__ == "__main__":
         sys.stderr = f
     seed_everything(args.seed)
 
-    if not args.test_only:
+    if not args.test_only and not args_read.refine_only:
         training(args)
 
     # Training done
     print("\nTraining complete.")
 
     if not args.test_only:
+        # training()'s Gaussians/optimizer/rendering tensors form autograd
+        # reference cycles that plain refcounting won't collect on function
+        # return -- without an explicit gc pass, refine()'s UNet allocates on
+        # top of a GPU that's still ~fully occupied by the just-finished
+        # training run (confirmed: torch.cuda.memory_allocated stayed within
+        # a few MB of its training-time peak here, on an 8GB card).
+        import gc
+        gc.collect()
+        torch.cuda.empty_cache()
         refine()
     refine_test()
     print("\nRefine complete.")
