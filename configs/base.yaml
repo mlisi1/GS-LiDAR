@@ -103,6 +103,12 @@ scale_increase_interval: 5000
 prune_big_point: 1
 size_threshold: 20
 big_point_threshold: 0.1
+
+# Raydrop-refinement UNet (post-training refine() step). null = every frame
+# in one batch, every step -- can OOM on small cards independent of the main
+# Gaussian training's own VRAM usage. Set refine_batch_size to mini-batch it.
+refine_batch_size: null
+refine_epochs: 1000
 t_grad: true
 no_time_split: true
 contract: true

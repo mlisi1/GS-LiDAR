@@ -494,8 +494,8 @@ def refine():
 
     loss_total = []
 
-    refine_bs = None  # set smaller batch size (e.g. 32) if OOM and adjust epochs accordingly
-    refine_epoch = 1000
+    refine_bs = args.refine_batch_size  # None = full batch (all frames every step) -- set via config if OOM
+    refine_epoch = args.refine_epochs
 
     optimizer = torch.optim.Adam(unet.parameters(), lr=0.001, weight_decay=0)
     scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.001, total_steps=refine_epoch)

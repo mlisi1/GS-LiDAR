@@ -52,3 +52,12 @@ test_iterations: [3000, 7000, 15000, 30000]
 random_init_point: 0
 dynamic: False
 sky_depth: False
+
+# refine()'s raydrop UNet defaults to one batch of all 411 training frames
+# per step -- OOMs an 8GB card on its own, independent of the Gaussian
+# training phase. Mini-batch it instead; refine_epochs bumped up a bit since
+# each step now sees ~32/411 of the data (rough compensation, not exact --
+# watch the printed "raydrop loss" every 50 steps and adjust further if it
+# hasn't flattened out by the end).
+refine_batch_size: 32
+refine_epochs: 3000
