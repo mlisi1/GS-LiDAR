@@ -590,7 +590,14 @@ def refine_test():
         ]
 
         with torch.no_grad():
-            raydrop_refine = unet(test_input)
+            # Same OOM shape as refine()'s training loop -- a single forward
+            # pass over the whole split (411 frames for mode="train") is
+            # enough activation memory to OOM an 8GB card even with no_grad.
+            # Reuse refine_batch_size to chunk inference too.
+            bs = args.refine_batch_size or test_input.shape[0]
+            raydrop_refine = torch.cat(
+                [unet(test_input[i:i + bs]) for i in range(0, test_input.shape[0], bs)], dim=0
+            )
             raydrop_mask = torch.where(raydrop_refine > 0.5, 1, 0)
             for idx in tqdm(range(gt.shape[0])):
                 raydrop_pano = raydrop_refine[idx, [0]]
